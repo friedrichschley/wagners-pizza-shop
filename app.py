@@ -96,8 +96,23 @@ class Handler(BaseHTTPRequestHandler):
     def send_json(self,o):
         d=json.dumps(o,ensure_ascii=False).encode("utf-8"); self.send_response(200); self.send_header("Content-Type","application/json; charset=utf-8"); self.send_header("Content-Length",str(len(d))); self.end_headers(); self.wfile.write(d)
     def send_asset(self,path):
-        fp=ASSET_DIR/Path(path).name
-        if not fp.exists(): self.send_error(404); return
-        data=fp.read_bytes(); ctype=mimetypes.guess_type(str(fp))[0] or "application/octet-stream"; self.send_response(200); self.send_header("Content-Type",ctype); self.send_header("Content-Length",str(len(data))); self.end_headers(); self.wfile.write(data)
+        name = Path(path).name
+        candidates = [
+            ASSET_DIR / name,
+            Path(name),
+            Path.cwd() / "assets" / name,
+            Path.cwd() / name,
+        ]
+        fp = next((p for p in candidates if p.exists()), None)
+        if fp is None:
+            self.send_error(404)
+            return
+        data = fp.read_bytes()
+        ctype = mimetypes.guess_type(str(fp))[0] or "application/octet-stream"
+        self.send_response(200)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
 if __name__=="__main__":
     init_db(); print(f"Wagner's Pizza Shop Webseite + App läuft unter http://127.0.0.1:{PORT}/wagner/website"); print(f"Kunden-App: http://127.0.0.1:{PORT}/wagner/app"); print(f"Küchen-/Ofen-GUI: http://127.0.0.1:{PORT}/wagner/kitchen"); print(f"Buchungssystem: http://127.0.0.1:{PORT}/wagner/admin"); HTTPServer((HOST,PORT),Handler).serve_forever()
